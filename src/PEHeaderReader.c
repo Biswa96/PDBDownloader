@@ -1,102 +1,109 @@
-#include "..\include\PEHeaderReader.h"
+#include "PDBDownload.h"
 
-void PEHeaderReader(char* FileName, char* url) {
+typedef struct _IMAGE_DEBUG_DIRECTORY_RAW {
+    uint8_t format[4];
+    uint8_t guid[16];
+    uint32_t age;
+    uint8_t name[255];
+} IMAGE_DEBUG_DIRECTORY_RAW, *PIMAGE_DEBUG_DIRECTORY_RAW;
 
-    FILE *file = fopen(FileName, "rb");
+void PEHeaderReader(char* PdbName, char* url) {
 
-    Image_Dos_Header dosHeader;
-    fread(&dosHeader, sizeof(Image_Dos_Header), 1, file);
-    fseek(file, dosHeader.e_lfanew, SEEK_SET);
+    FILE* File = fopen(PdbName, "rb");
+
+    IMAGE_DOS_HEADER DosHeader;
+    fread(&DosHeader, sizeof(IMAGE_DOS_HEADER), 1, File);
+    fseek(File, DosHeader.e_lfanew, SEEK_SET);
 
     // Add 4 bytes to the offset
-    uint32_t ntHeadersSignature;
-    fread(&ntHeadersSignature, 4, 1, file);
+    uint32_t NtHeadersSignature;
+    fread(&NtHeadersSignature, 4, 1, File);
 
-    Image_File_Header fileHeader;
-    fread(&fileHeader, sizeof(Image_File_Header), 1, file);
+    IMAGE_FILE_HEADER FileHeader;
+    fread(&FileHeader, sizeof(IMAGE_FILE_HEADER), 1, File);
 
-    bool is32BitHeader = fileHeader.Machine == 0x14C; // 0x14C = X86
+    uint32_t is32BitHeader = FileHeader.Machine == IMAGE_FILE_MACHINE_I386;
 
-    Image_Optional_Header32 optionalHeader32 = { 0 };
-    Image_Optional_Header64 optionalHeader64 = { 0 };
+    IMAGE_OPTIONAL_HEADER32 OptionalHeader32 = { 0 };
+    IMAGE_OPTIONAL_HEADER64 OptionalHeader64 = { 0 };
 
     if (is32BitHeader)
-        fread(&optionalHeader32, sizeof(Image_Optional_Header32), 1, file);
+        fread(&OptionalHeader32, sizeof(IMAGE_OPTIONAL_HEADER32), 1, File);
     else
-        fread(&optionalHeader64, sizeof(Image_Optional_Header64), 1, file);
+        fread(&OptionalHeader64, sizeof(IMAGE_OPTIONAL_HEADER64), 1, File);
 
     uint32_t offDebug = 0;
     uint32_t cbFromHeader = 0;
 
-    uint32_t cbDebug = is32BitHeader ? optionalHeader32.Debug.Size : optionalHeader64.Debug.Size;
+    uint32_t cbDebug = is32BitHeader ? OptionalHeader32.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].Size : OptionalHeader64.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].Size;
 
-    for (int headerNo = 0; headerNo < fileHeader.NumberOfSections; ++headerNo) {
-        Image_Section_Header header;
-        fread(&header, sizeof(Image_Section_Header), 1, file);
+    for (int HeaderNo = 0; HeaderNo < FileHeader.NumberOfSections; ++HeaderNo) {
+        IMAGE_SECTION_HEADER SectionHeader;
+        fread(&SectionHeader, sizeof(IMAGE_SECTION_HEADER), 1, File);
 
-        if ((header.PointerToRawData != 0) && (header.SizeOfRawData != 0) &&
-            (cbFromHeader < (header.PointerToRawData + header.SizeOfRawData))) {
-            cbFromHeader = header.PointerToRawData + header.SizeOfRawData;
+        if ((SectionHeader.PointerToRawData != 0) && (SectionHeader.SizeOfRawData != 0) &&
+            (cbFromHeader < (SectionHeader.PointerToRawData + SectionHeader.SizeOfRawData))) {
+            cbFromHeader = SectionHeader.PointerToRawData + SectionHeader.SizeOfRawData;
         }
 
         if (cbDebug != 0) {
             if (is32BitHeader) {
-                if (header.VirtualAddress <= optionalHeader32.Debug.VirtualAddress &&
-                    ((header.VirtualAddress + header.SizeOfRawData) > optionalHeader32.Debug.VirtualAddress)) {
-                    offDebug = optionalHeader32.Debug.VirtualAddress - header.VirtualAddress + header.PointerToRawData;
+                if (SectionHeader.VirtualAddress <= OptionalHeader32.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].VirtualAddress &&
+                    ((SectionHeader.VirtualAddress + SectionHeader.SizeOfRawData) > OptionalHeader32.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].VirtualAddress)) {
+                    offDebug = OptionalHeader32.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].VirtualAddress - SectionHeader.VirtualAddress + SectionHeader.PointerToRawData;
                 }
             }
 
             else {
-                if (header.VirtualAddress <= optionalHeader64.Debug.VirtualAddress &&
-                    ((header.VirtualAddress + header.SizeOfRawData) > optionalHeader64.Debug.VirtualAddress)) {
-                    offDebug = optionalHeader64.Debug.VirtualAddress - header.VirtualAddress + header.PointerToRawData;
+                if (SectionHeader.VirtualAddress <= OptionalHeader64.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].VirtualAddress &&
+                    ((SectionHeader.VirtualAddress + SectionHeader.SizeOfRawData) > OptionalHeader64.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].VirtualAddress)) {
+                    offDebug = OptionalHeader64.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].VirtualAddress - SectionHeader.VirtualAddress + SectionHeader.PointerToRawData;
                 }
             }
         }
     }
 
-    fseek(file, offDebug, SEEK_SET);
+    fseek(File, offDebug, SEEK_SET);
 
-    bool loopexit = false;
+    uint8_t loopexit = FALSE;
 
-    Image_Debug_Directory_Raw debugInfo;
-    while (cbDebug >= sizeof(Image_Debug_Directory)) {
+    IMAGE_DEBUG_DIRECTORY_RAW DebugRaw;
+    while (cbDebug >= sizeof(IMAGE_DEBUG_DIRECTORY)) {
 
-        if (loopexit == false) {
+        if (loopexit == FALSE) {
 
-            Image_Debug_Directory imageDebugDirectory;
+            IMAGE_DEBUG_DIRECTORY DebugDirectory;
 
-            fread(&imageDebugDirectory, sizeof(Image_Debug_Directory), 1, file);
+            fread(&DebugDirectory, sizeof(IMAGE_DEBUG_DIRECTORY), 1, File);
 
-            long seekPosition = ftell(file);
+            uint32_t seekPosition = ftell(File);
 
-            if (imageDebugDirectory.Type == 0x2) {
-                fseek(file, imageDebugDirectory.PointerToRawData, SEEK_SET);
-                fread(&debugInfo, sizeof(Image_Debug_Directory_Raw), 1, file);
-                loopexit = true;
+            if (DebugDirectory.Type == IMAGE_DEBUG_TYPE_CODEVIEW) {
+                fseek(File, DebugDirectory.PointerToRawData, SEEK_SET);
+                fread(&DebugRaw, sizeof(IMAGE_DEBUG_DIRECTORY_RAW), 1, File);
+                loopexit = TRUE;
 
                 // Downloading logic for .NET native images
-                if (strstr((char *)debugInfo.name, ".ni.") != 0) {
-                    fseek(file, seekPosition, SEEK_SET);
-                    loopexit = false;
+                if (strstr((char*)DebugRaw.name, ".ni.") != 0) {
+                    fseek(File, seekPosition, SEEK_SET);
+                    loopexit = FALSE;
                 }
             }
 
-            if ((imageDebugDirectory.PointerToRawData != 0) && (imageDebugDirectory.SizeOfData != 0) &&
-                (cbFromHeader < (imageDebugDirectory.PointerToRawData + imageDebugDirectory.SizeOfData))) {
-                cbFromHeader = imageDebugDirectory.PointerToRawData + imageDebugDirectory.SizeOfData;
+            if ((DebugDirectory.PointerToRawData != 0) && (DebugDirectory.SizeOfData != 0) &&
+                (cbFromHeader < (DebugDirectory.PointerToRawData + DebugDirectory.SizeOfData))) {
+                cbFromHeader = DebugDirectory.PointerToRawData + DebugDirectory.SizeOfData;
             }
         }
 
-        cbDebug -= sizeof(Image_Debug_Directory);
+        cbDebug -= sizeof(IMAGE_DEBUG_DIRECTORY);
     }
 
-    fclose(file);
+    fclose(File);
 
     if (loopexit) {
-        char *pdbName = (char *)strrchr((char *)debugInfo.name, '\\');
-        pdbName = pdbName ? pdbName + 1 : (char *)debugInfo.name;
+        char *pdbName = strrchr((char*)DebugRaw.name, '\\');
+        pdbName = pdbName ? ++pdbName : (char*)DebugRaw.name;
 
         const char MsServer[] = "http://msdl.microsoft.com/download/symbols";
 
@@ -104,19 +111,17 @@ void PEHeaderReader(char* FileName, char* url) {
             url, "%s/%s/%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%d/%s",
             MsServer,
             pdbName,
-            debugInfo.guid[3], debugInfo.guid[2],
-            debugInfo.guid[1], debugInfo.guid[0],
-            debugInfo.guid[5], debugInfo.guid[4],
-            debugInfo.guid[7], debugInfo.guid[6],
-            debugInfo.guid[8], debugInfo.guid[9],
-            debugInfo.guid[10], debugInfo.guid[11],
-            debugInfo.guid[12], debugInfo.guid[13],
-            debugInfo.guid[14], debugInfo.guid[15],
-            debugInfo.age,
+            DebugRaw.guid[3], DebugRaw.guid[2], DebugRaw.guid[1], DebugRaw.guid[0],
+            DebugRaw.guid[5], DebugRaw.guid[4],
+            DebugRaw.guid[7], DebugRaw.guid[6],
+            DebugRaw.guid[8], DebugRaw.guid[9],
+            DebugRaw.guid[10], DebugRaw.guid[11], DebugRaw.guid[12], 
+            DebugRaw.guid[13], DebugRaw.guid[14], DebugRaw.guid[15],
+            DebugRaw.age,
             pdbName
         );
     }
     else {
-        fprintf(stderr, "PEHeaderReader Error: Check the path of EXE or DLL\n");
+        printf("PEHeaderReader Error: Invalid PE\n");
     }
 }

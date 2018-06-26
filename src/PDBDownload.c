@@ -1,4 +1,4 @@
-#include "..\include\stdafx.h"
+#include "PDBDownload.h"
 
 int main(int argc, char* argv[]) {
 
@@ -7,16 +7,22 @@ int main(int argc, char* argv[]) {
             "No path supplied\n"
             "Usage: PDBDownloader.exe <DLL or EXE file path>\n"
         );
-        exit(EXIT_FAILURE);
+        exit(1);
     }
 
     char* pdbName = 0;
-    char url[UCHAR_MAX + 1];
+    char url[UCHAR_MAX + 1] = { 0 };
 
     PEHeaderReader(argv[1], url);
-    printf("\nPDB Download URL: %s\n\n", url);
-    (pdbName = strrchr(url, '/')) ? ++pdbName : (pdbName = url);
-
-    FileDownloader(argv[0], url, pdbName);
-    printf("\nDownload Complete\n");
+    if (url) {
+        printf("PDB Download URL: %s\n", url);
+        pdbName = strrchr(url, '/');
+        ++pdbName;
+        FileDownloader(pdbName, url);
+    }
+    else {
+        printf("URL not found\n");
+        exit(1);
+    }
+    
 }

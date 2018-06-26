@@ -4,7 +4,11 @@ Download PDB Symbol files for Debugging directly from MSDL Server.
 
 ## Acknowledgment
 
-The PE header reader algorithm is taken from [rajkumar-rangaraj/PDB-Downloader](https://github.com/rajkumar-rangaraj/PDB-Downloader) repository. 
+The PE header reader algorithm is taken from [rajkumar-rangaraj/PDB-Downloader][1] repository. Also these articles & links:
+
+  * [Peering Inside the PE: A Tour of the Win32 Portable Executable File Format][2]
+  * [PE Format][3]
+  * [Wine Source winnt.h][4]
 
 ## License 
 
@@ -24,3 +28,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ```
+
+[1]: https://github.com/rajkumar-rangaraj/PDB-Downloader
+[2]: https://msdn.microsoft.com/en-US/library/ms809762.aspx
+[3]: https://docs.microsoft.com/en-us/windows/desktop/Debug/pe-format
+[4]: https://source.winehq.org/source/include/winnt.h
+

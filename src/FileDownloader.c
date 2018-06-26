@@ -1,44 +1,42 @@
-#include "..\include\stdafx.h"
+#include "PDBDownload.h"
 
-void FileDownloader(char* exeName, char* url, char* pdbName) {
+void FileDownloader(char* pdbName, char* url) {
 
-    HANDLE hInternetOpen, hInternetUrl, hFile;
-    unsigned long NumberOfBytesWritten = 0, NumberOfBytesRead = 0, FileSize = 0, BuffLen = sizeof(int), Download = 0, i = 0;
-    unsigned long Flags = INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE | INTERNET_FLAG_NO_UI | INTERNET_FLAG_PRAGMA_NOCACHE;
+    DWORD BytesRead, FileSize, Download, i = 0, BuffLen = sizeof(int);
+    DWORD Flags = INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE | INTERNET_FLAG_NO_UI | INTERNET_FLAG_PRAGMA_NOCACHE;
 
-    hInternetOpen = InternetOpenA(exeName, 0, 0, 0, 0);
-    hInternetUrl = InternetOpenUrlA(hInternetOpen, url, 0, 0, Flags, 0);
+    HANDLE hOpen = InternetOpen("", INTERNET_OPEN_TYPE_PRECONFIG, 0, 0, 0);
+    HANDLE hUrl = InternetOpenUrl(hOpen, url, 0, 0, Flags, 0);
 
-    if (HttpQueryInfoA(hInternetUrl, HTTP_QUERY_FLAG_NUMBER | HTTP_QUERY_CONTENT_LENGTH, &FileSize, &BuffLen, NULL))
+    BOOL IsValidUrl = HttpQueryInfo(hUrl, HTTP_QUERY_FLAG_NUMBER | HTTP_QUERY_CONTENT_LENGTH, &FileSize, &BuffLen, 0);
+
+    if (IsValidUrl && FileSize) {
         printf("Total file size: %d KB\n", FileSize / 1024);
-    else
+    }
+    else {
         printf("HttpQueryInfo Error: %d\n", (GetLastError() & 0xFFFF));
+        exit(1);
+    }
 
-    hFile = CreateFileA(pdbName, GENERIC_ALL, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+    FILE* File = fopen(pdbName, "wb");
     
-    void* Buffer = malloc(USHRT_MAX);
-    
-    do {
+    char Buffer[USHRT_MAX];
 
-        if (!InternetReadFile(hInternetUrl, Buffer, USHRT_MAX, &NumberOfBytesRead))
-            printf("InternetReadFile Error: %d\n", (GetLastError() & 0xFFFF));
+    while (InternetReadFile(hUrl, Buffer, USHRT_MAX, &BytesRead)) {
 
-        Download = NumberOfBytesRead + i;
-        if (FileSize)
-            printf("Downloading: %d%%...\r", 100 * Download / FileSize);
-
-        if (!NumberOfBytesRead)
+        if (BytesRead) {
+            Download = BytesRead + i;
+            printf("Downloading: %d%%\r", (100 * Download / FileSize));
+            fwrite(Buffer, 1, BytesRead, File);
+            i = Download;
+        }
+        else {
+            printf("\n");
             break;
+        }
+    }
 
-        if (!WriteFile(hFile, Buffer, NumberOfBytesRead, &NumberOfBytesWritten, 0))
-            printf("WriteFile Error: %d\n", (GetLastError() & 0xFFFF));
-
-        i = Download;
-
-    } while (NumberOfBytesRead);
-
-    free(Buffer);
-    CloseHandle(hFile);
-    InternetCloseHandle(hInternetUrl);
-    InternetCloseHandle(hInternetOpen);
+    fclose(File);
+    InternetCloseHandle(hUrl);
+    InternetCloseHandle(hOpen);
 }
