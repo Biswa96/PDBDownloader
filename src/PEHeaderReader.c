@@ -1,15 +1,16 @@
 #include "PDBDownload.h"
+#include <winnt.h> /*All the structs and definitions*/
 
 typedef struct _IMAGE_DEBUG_DIRECTORY_RAW {
     uint8_t format[4];
-    uint8_t guid[16];
-    uint32_t age;
-    uint8_t name[255];
+    uint8_t PdbSignature[16];
+    uint32_t PdbDbiAge;
+    uint8_t ImageName[256];
 } IMAGE_DEBUG_DIRECTORY_RAW, *PIMAGE_DEBUG_DIRECTORY_RAW;
 
-void PEHeaderReader(char* PdbName, char* url) {
+void PEHeaderReader(char* PEFileName, char* url) {
 
-    FILE* File = fopen(PdbName, "rb");
+    FILE* File = fopen(PEFileName, "rb");
 
     IMAGE_DOS_HEADER DosHeader;
     fread(&DosHeader, sizeof(IMAGE_DOS_HEADER), 1, File);
@@ -35,7 +36,8 @@ void PEHeaderReader(char* PdbName, char* url) {
     uint32_t offDebug = 0;
     uint32_t cbFromHeader = 0;
 
-    uint32_t cbDebug = is32BitHeader ? OptionalHeader32.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].Size : OptionalHeader64.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].Size;
+    uint32_t cbDebug = is32BitHeader ?
+        OptionalHeader32.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].Size : OptionalHeader64.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].Size;
 
     for (int HeaderNo = 0; HeaderNo < FileHeader.NumberOfSections; ++HeaderNo) {
         IMAGE_SECTION_HEADER SectionHeader;
@@ -84,7 +86,7 @@ void PEHeaderReader(char* PdbName, char* url) {
                 loopexit = TRUE;
 
                 // Downloading logic for .NET native images
-                if (strstr((char*)DebugRaw.name, ".ni.") != 0) {
+                if (strstr((char*)DebugRaw.ImageName, ".ni.") != 0) {
                     fseek(File, seekPosition, SEEK_SET);
                     loopexit = FALSE;
                 }
@@ -102,23 +104,21 @@ void PEHeaderReader(char* PdbName, char* url) {
     fclose(File);
 
     if (loopexit) {
-        char *pdbName = strrchr((char*)DebugRaw.name, '\\');
-        pdbName = pdbName ? ++pdbName : (char*)DebugRaw.name;
 
         const char MsServer[] = "http://msdl.microsoft.com/download/symbols";
 
         sprintf(
             url, "%s/%s/%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%.2X%d/%s",
             MsServer,
-            pdbName,
-            DebugRaw.guid[3], DebugRaw.guid[2], DebugRaw.guid[1], DebugRaw.guid[0],
-            DebugRaw.guid[5], DebugRaw.guid[4],
-            DebugRaw.guid[7], DebugRaw.guid[6],
-            DebugRaw.guid[8], DebugRaw.guid[9],
-            DebugRaw.guid[10], DebugRaw.guid[11], DebugRaw.guid[12], 
-            DebugRaw.guid[13], DebugRaw.guid[14], DebugRaw.guid[15],
-            DebugRaw.age,
-            pdbName
+            DebugRaw.ImageName,
+            DebugRaw.PdbSignature[3], DebugRaw.PdbSignature[2], DebugRaw.PdbSignature[1], DebugRaw.PdbSignature[0],
+            DebugRaw.PdbSignature[5], DebugRaw.PdbSignature[4],
+            DebugRaw.PdbSignature[7], DebugRaw.PdbSignature[6],
+            DebugRaw.PdbSignature[8], DebugRaw.PdbSignature[9],
+            DebugRaw.PdbSignature[10], DebugRaw.PdbSignature[11], DebugRaw.PdbSignature[12],
+            DebugRaw.PdbSignature[13], DebugRaw.PdbSignature[14], DebugRaw.PdbSignature[15],
+            DebugRaw.PdbDbiAge,
+            DebugRaw.ImageName
         );
     }
     else {

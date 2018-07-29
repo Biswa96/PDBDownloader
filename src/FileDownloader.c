@@ -1,6 +1,11 @@
 #include "PDBDownload.h"
+#include <WinInet.h>
 
-void FileDownloader(char* pdbName, char* url) {
+#ifdef _MSC_VER
+#pragma comment(lib, "Wininet.lib")
+#endif //_MSC_VER
+
+void FileDownloader(char* PdbName, char* url) {
 
     DWORD BytesRead, FileSize, Download, i = 0, BuffLen = sizeof(int);
     DWORD Flags = INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE | INTERNET_FLAG_NO_UI | INTERNET_FLAG_PRAGMA_NOCACHE;
@@ -11,14 +16,14 @@ void FileDownloader(char* pdbName, char* url) {
     BOOL IsValidUrl = HttpQueryInfo(hUrl, HTTP_QUERY_FLAG_NUMBER | HTTP_QUERY_CONTENT_LENGTH, &FileSize, &BuffLen, 0);
 
     if (IsValidUrl && FileSize) {
-        printf("Total file size: %d KB\n", FileSize / 1024);
+        printf("Total file size: %ld KB\n", FileSize / 1024);
     }
     else {
-        printf("HttpQueryInfo Error: %d\n", (GetLastError() & 0xFFFF));
+        printf("HttpQueryInfo Error: %ld\n", (GetLastError() & 0xFFFF));
         exit(1);
     }
 
-    FILE* File = fopen(pdbName, "wb");
+    FILE* File = fopen(PdbName, "wb");
     
     char Buffer[USHRT_MAX];
 
@@ -26,8 +31,8 @@ void FileDownloader(char* pdbName, char* url) {
 
         if (BytesRead) {
             Download = BytesRead + i;
-            printf("Downloading: %d%%\r", (100 * Download / FileSize));
-            fwrite(Buffer, 1, BytesRead, File);
+            printf("Downloading: %ld%%\r", (100 * Download / FileSize));
+            fwrite(Buffer, sizeof(char), BytesRead, File);
             i = Download;
         }
         else {

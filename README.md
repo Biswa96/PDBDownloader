@@ -1,6 +1,14 @@
 # PDBDownloader
 
-Download PDB Symbol files for Debugging directly from MSDL Server. 
+Download PDB Symbol files for Debugging directly from MSDL Server without Windows Driver Kit and Symbol Checker. 
+
+## Features
+
+  * This is a standalone program and can be used from external drives.
+  * Works with both 32bit and 64bit programs.
+  * Just drag and drop a valid PE file onto the PDBDownloader executable.
+  * Does not require whole Windows Driver Kit.
+  * Does not require any administrator privilege.
 
 ## Acknowledgment
 
@@ -28,6 +36,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ```
+
+<!-- Links -->
 
 [1]: https://github.com/rajkumar-rangaraj/PDB-Downloader
 [2]: https://msdn.microsoft.com/en-US/library/ms809762.aspx
