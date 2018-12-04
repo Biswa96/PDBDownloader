@@ -1,7 +1,10 @@
-#include "PDBDownload.h"
+#include <Windows.h>
+#include <stdio.h>
+#include "FileDownloader.h"
+#include "PEHeaderReader.h"
 
-int main(int argc, char* argv[]) {
-
+int main(int argc, char* argv[])
+{
     if (argc < 2) {
         printf(
             "No path supplied\n"

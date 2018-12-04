@@ -1,12 +1,11 @@
-#include "PDBDownload.h"
+#include <Windows.h>
 #include <WinInet.h>
+#include <stdio.h>
 
-#ifdef _MSC_VER
-#pragma comment(lib, "Wininet.lib")
-#endif //_MSC_VER
-
-void FileDownloader(char* PdbName, char* url) {
-
+void FileDownloader(
+    char* PdbName,
+    char* url)
+{
     DWORD BytesRead, FileSize, Download, i = 0, BuffLen = sizeof(int);
     DWORD Flags = INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE | INTERNET_FLAG_NO_UI | INTERNET_FLAG_PRAGMA_NOCACHE;
 

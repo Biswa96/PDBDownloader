@@ -1,4 +1,6 @@
-#include "PDBDownload.h"
+#include <Windows.h>
+#include <stdio.h>
+#include <stdint.h>
 #include <winnt.h> /*All the structs and definitions*/
 
 typedef struct _IMAGE_DEBUG_DIRECTORY_RAW {
@@ -8,8 +10,10 @@ typedef struct _IMAGE_DEBUG_DIRECTORY_RAW {
     uint8_t ImageName[256];
 } IMAGE_DEBUG_DIRECTORY_RAW, *PIMAGE_DEBUG_DIRECTORY_RAW;
 
-void PEHeaderReader(char* PEFileName, char* url) {
-
+void PEHeaderReader(
+    char* PEFileName,
+    char* url)
+{
     FILE* File = fopen(PEFileName, "rb");
 
     IMAGE_DOS_HEADER DosHeader;
