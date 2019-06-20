@@ -1,31 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="src\FileDownloader.c" />
-    <ClCompile Include="src\PDBDownload.c" />
-    <ClCompile Include="src\PEHeaderReader.c" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="src\FileDownloader.h" />
-    <ClInclude Include="src\PEHeaderReader.h" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
-    <VCProjectVersion>15.0</VCProjectVersion>
+    <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{97392E13-8ED6-491C-9B3B-1B1012AF3017}</ProjectGuid>
     <RootNamespace>PDBDownloader</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -48,9 +39,19 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>Wininet.lib</AdditionalDependencies>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>wininet.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="src\FileDownloader.c" />
+    <ClCompile Include="src\PDBDownload.c" />
+    <ClCompile Include="src\PEHeaderReader.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\FileDownloader.h" />
+    <ClInclude Include="src\PEHeaderReader.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
